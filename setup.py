@@ -16,17 +16,7 @@ from subprocess import DEVNULL, call
 import sys
 
 
-try:
-    import torch
-    from torch.utils.cpp_extension import BuildExtension, CppExtension
-except ImportError as e:
-    raise ImportError(
-        ("PyTorch is required to install pytorch-fast-transformers. Please "
-         "install your favorite version of PyTorch, we support 1.3.1, 1.5.0 "
-         "and >=1.6"),
-        name=e.name,
-        path=e.path
-    ) from e
+
 
 
 @lru_cache(None)
@@ -75,6 +65,14 @@ def _get_cpu_extra_compile_args():
 
 @lru_cache()
 def _get_gpu_extra_compile_args():
+    try:
+        import torch
+    except ImportError as e:
+        raise ImportError(
+            ("PyTorch is required to install pytorch-fast-transformers. Please "
+             "install your favorite version of PyTorch, we support 1.3.1, 1.5.0 "
+             "and >=1.6")
+        ) from e
     if torch.cuda.is_available():
         return []
     else:
@@ -82,6 +80,15 @@ def _get_gpu_extra_compile_args():
 
 
 def get_extensions():
+    try:
+        from torch.utils.cpp_extension import CppExtension, CUDAExtension
+    except ImportError as e:
+        raise ImportError(
+            ("PyTorch is required to install pytorch-fast-transformers. Please "
+             "install your favorite version of PyTorch, we support 1.3.1, 1.5.0 "
+             "and >=1.6")
+        ) from e
+
     extensions = [
         CppExtension(
             "fast_transformers.hashing.hash_cpu",
@@ -134,7 +141,6 @@ def get_extensions():
         )
     ]
     if cuda_toolkit_available():
-        from torch.utils.cpp_extension import CUDAExtension
         extensions += [
             CUDAExtension(
                 "fast_transformers.hashing.hash_cuda",
@@ -197,6 +203,15 @@ def get_extensions():
 
 
 def setup_package():
+    try:
+        from torch.utils.cpp_extension import BuildExtension
+    except ImportError as e:
+        raise ImportError(
+            ("PyTorch is required to install pytorch-fast-transformers. Please "
+             "install your favorite version of PyTorch, we support 1.3.1, 1.5.0 "
+             "and >=1.6")
+        ) from e
+
     with open("README.rst") as f:
         long_description = f.read()
     meta = collect_metadata()
