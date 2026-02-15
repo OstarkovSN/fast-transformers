@@ -12,6 +12,7 @@ from itertools import dropwhile
 import os
 from os import path
 from setuptools import find_packages, setup
+from setuptools.command.build_ext import build_ext as _build_ext
 from subprocess import DEVNULL, call
 import sys
 
@@ -188,11 +189,44 @@ def get_extensions():
     return extensions
 
 
+from setuptools.command.build_ext import build_ext as _build_ext
+
+
+class BuildExtension:
+    """Lazy-imported wrapper for torch.utils.cpp_extension.BuildExtension."""
+    
+    def __new__(cls, *args, **kwargs):
+        import torch
+        from torch.utils.cpp_extension import BuildExtension as TorchBuildExtension
+        return TorchBuildExtension(*args, **kwargs)
+
+
+def get_extension_list():
+    """Get list of extensions, returning empty list if torch not available."""
+    try:
+        import torch
+        from torch.utils.cpp_extension import CppExtension, CUDAExtension
+        return get_extensions()
+    except ImportError:
+        return []
+
+
 def setup_package():
     with open("README.rst") as f:
         long_description = f.read()
     meta = collect_metadata()
     version_suffix = os.getenv("FAST_TRANSFORMERS_VERSION_SUFFIX", "")
+    
+    # Always include ext_modules (even if empty - will be determined by BuildExtension)
+    ext_modules = get_extension_list()
+    
+    # Only set custom BuildExtension if we have extensions to build
+    if ext_modules:
+        cmdclass = {"build_ext": BuildExtension}
+    else:
+        # Extensions not available (torch not installed), use default build
+        cmdclass = {}
+    
     setup(
         name="pytorch-fast-transformers",
         version=meta["version"] + version_suffix,
@@ -217,17 +251,6 @@ def setup_package():
         cmdclass=cmdclass,
         install_requires=["torch"]
     )
-
-
-ext_modules = []
-cmdclass = {}
-
-try:
-    from torch.utils.cpp_extension import BuildExtension
-    ext_modules = get_extensions()
-    cmdclass = {"build_ext": BuildExtension}
-except ImportError:
-    pass
 
 
 if __name__ == "__main__":
