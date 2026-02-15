@@ -65,14 +65,7 @@ def _get_cpu_extra_compile_args():
 
 @lru_cache()
 def _get_gpu_extra_compile_args():
-    try:
-        import torch
-    except ImportError as e:
-        raise ImportError(
-            ("PyTorch is required to install pytorch-fast-transformers. Please "
-             "install your favorite version of PyTorch, we support 1.3.1, 1.5.0 "
-             "and >=1.6")
-        ) from e
+    import torch
     if torch.cuda.is_available():
         return []
     else:
@@ -80,14 +73,7 @@ def _get_gpu_extra_compile_args():
 
 
 def get_extensions():
-    try:
-        from torch.utils.cpp_extension import CppExtension, CUDAExtension
-    except ImportError as e:
-        raise ImportError(
-            ("PyTorch is required to install pytorch-fast-transformers. Please "
-             "install your favorite version of PyTorch, we support 1.3.1, 1.5.0 "
-             "and >=1.6")
-        ) from e
+    from torch.utils.cpp_extension import CppExtension, CUDAExtension
 
     extensions = [
         CppExtension(
@@ -203,15 +189,6 @@ def get_extensions():
 
 
 def setup_package():
-    try:
-        from torch.utils.cpp_extension import BuildExtension
-    except ImportError as e:
-        raise ImportError(
-            ("PyTorch is required to install pytorch-fast-transformers. Please "
-             "install your favorite version of PyTorch, we support 1.3.1, 1.5.0 "
-             "and >=1.6")
-        ) from e
-
     with open("README.rst") as f:
         long_description = f.read()
     meta = collect_metadata()
@@ -236,10 +213,21 @@ def setup_package():
             "Programming Language :: Python :: 3.6",
         ],
         packages=find_packages(exclude=["docs", "tests", "scripts", "examples"]),
-        ext_modules=get_extensions(),
-        cmdclass={"build_ext": BuildExtension},
+        ext_modules=ext_modules,
+        cmdclass=cmdclass,
         install_requires=["torch"]
     )
+
+
+ext_modules = []
+cmdclass = {}
+
+try:
+    from torch.utils.cpp_extension import BuildExtension
+    ext_modules = get_extensions()
+    cmdclass = {"build_ext": BuildExtension}
+except ImportError:
+    pass
 
 
 if __name__ == "__main__":
